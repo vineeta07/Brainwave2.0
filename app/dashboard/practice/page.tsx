@@ -142,7 +142,7 @@ const scenarios = [
 export default function PracticeSessionPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { currentSession, startSession, endSession, updateSessionMetrics, user } = useStore()
+  const { currentSession, startSession, endSession, updateSessionMetrics, updateHistorySession, user } = useStore()
 
   // States
   const [setupStep, setSetupStep] = useState<'selection' | 'preview'>('selection')
@@ -154,13 +154,16 @@ export default function PracticeSessionPage() {
   // Session Configuration
   const [selectedMode, setSelectedMode] = useState<string | null>(null)
   const [selectedScenario, setSelectedScenario] = useState<typeof scenarios[0] | null>(null)
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('en-US')
 
   // Real-time Data
   const [currentMetrics, setCurrentMetrics] = useState<any>(null)
   const [reassurance, setReassurance] = useState<string>('')
   const [liveSignals, setLiveSignals] = useState<LiveSignal[]>([])
   const [liveObservations, setLiveObservations] = useState<LiveObservation[]>([])
-  const [liveTranscript, setLiveTranscript] = useState<string>('')
+  const [liveTranscriptItems, setLiveTranscriptItems] = useState<{ timestamp: string, text: string }[]>([])
+  const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now())
+  const [interimTranscript, setInterimTranscript] = useState<string>('') // For real-time feedback
   const [detectedPatterns, setDetectedPatterns] = useState<string[]>([])
   const [scenarioEvents, setScenarioEvents] = useState<any[]>([])
 
@@ -174,6 +177,16 @@ export default function PracticeSessionPage() {
   const orchestratorRef = useRef<OrchestratorAgent | null>(null)
   const observationIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Speech Recognition Refs
+  const recognitionRef = useRef<any>(null)
+  const isRecordingRef = useRef(false)
+  const transcriptRef = useRef<HTMLParagraphElement | null>(null)
+
+  // Sync ref with state for event listeners
+  useEffect(() => {
+    isRecordingRef.current = isRecording
+  }, [isRecording])
 
   useEffect(() => {
     orchestratorRef.current = new OrchestratorAgent()
@@ -212,6 +225,9 @@ export default function PracticeSessionPage() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop()
     }
+    if (recognitionRef.current) {
+      recognitionRef.current.stop() // Ensure zombie instances are killed
+    }
   }
 
   // Effect to attach stream to video element when it becomes available
@@ -235,7 +251,102 @@ export default function PracticeSessionPage() {
     setSetupStep('preview')
   }
 
+  // Helper to safely start recognition
+  const startSpeechRecognition = () => {
+    if (typeof window === 'undefined') return
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      alert("Speech Recognition not supported")
+      return
+    }
+
+    // Cleanup old instance if exists
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onend = null // prevent recursive restart during manual cleanup
+        recognitionRef.current.abort()
+      } catch (e) { console.error(e) }
+    }
+
+    const recognition = new SpeechRecognition()
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.lang = selectedLanguage
+
+    recognition.onstart = () => {
+      console.log("SpeechRecognition started (Fresh Instance)")
+    }
+
+    recognition.onresult = (event: any) => {
+      let interimTranscriptChunk = ''
+      let finalTranscriptChunk = ''
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscriptChunk += event.results[i][0].transcript + ' '
+        } else {
+          interimTranscriptChunk += event.results[i][0].transcript
+        }
+      }
+
+      setInterimTranscript(interimTranscriptChunk)
+
+      if (finalTranscriptChunk) {
+        // Calculate relative time (MM:SS)
+        const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000)
+        const minutes = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0')
+        const seconds = (elapsedSeconds % 60).toString().padStart(2, '0')
+        const timestamp = `${minutes}:${seconds}`
+
+        setLiveTranscriptItems(prev => [...prev, { timestamp, text: finalTranscriptChunk }])
+        setInterimTranscript('')
+      }
+    }
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech Recognition Error", event.error)
+      if (event.error === 'not-allowed') {
+        setIsRecording(false) // Stop if permission denied
+        alert("Microphone denied.")
+      }
+    }
+
+    recognition.onend = () => {
+      console.log("SpeechRecognition ended")
+      if (isRecordingRef.current) {
+        console.log("Auto-restarting with new instance in 200ms...")
+        setTimeout(() => {
+          if (isRecordingRef.current) {
+            startSpeechRecognition() // Recursive restart with FRESH instance
+          }
+        }, 200)
+      }
+    }
+
+    try {
+      recognition.start()
+      recognitionRef.current = recognition
+    } catch (e) {
+      console.error("Failed to start new recognition instance", e)
+    }
+  }
+
+  // Effect to update language if active
+  useEffect(() => {
+    if (isRecording && recognitionRef.current && recognitionRef.current.lang !== selectedLanguage) {
+      console.log("Language changed, restarting recognition...")
+      startSpeechRecognition()
+    }
+  }, [selectedLanguage])
+
+  // Update ref when isRecording changes so onend knows whether to restart
+  useEffect(() => {
+    isRecordingRef.current = isRecording
+  }, [isRecording])
+
   const startRecording = async () => {
+    console.log("Start Session Block Triggered")
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
@@ -257,7 +368,7 @@ export default function PracticeSessionPage() {
       source.connect(analyserRef.current)
 
       // MediaRecorder Setup for Agent Pipeline
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' })
       mediaRecorderRef.current = mediaRecorder
 
       mediaRecorder.ondataavailable = async (event) => {
@@ -269,13 +380,18 @@ export default function PracticeSessionPage() {
       // Start recording and firing dataavailable event every 2 seconds
       mediaRecorder.start(2000)
 
+      // Start Speech Recognition
+      setLiveTranscriptItems([])
+      setInterimTranscript('')
+      setSessionStartTime(Date.now())
+      startSpeechRecognition()
+
       // Start Session in Store
       startSession(selectedMode || 'conversation', selectedScenario?.title)
 
       setIsRecording(true)
       setIsPaused(false)
       setLiveObservations([])
-      setLiveTranscript('')
       setDetectedPatterns([])
 
       // Start Analysis Loop
@@ -382,19 +498,6 @@ export default function PracticeSessionPage() {
       setLiveObservations(prev => [newObservation, ...prev].slice(0, 5))
     }, 5000)
 
-    // 1.5 Transcript Simulator
-    setInterval(() => {
-      const phrases = [
-        "I'm trying to explain the core value proposition...",
-        "So, effectively, the issue is that...",
-        "As we move forward with this strategy...",
-        "The market opportunity is clearly huge...",
-        "We need to address the scalability concerns...",
-      ]
-      const phrase = phrases[Math.floor(Math.random() * phrases.length)]
-      setLiveTranscript(prev => (prev ? prev + ' ' + phrase : phrase))
-    }, 3000)
-
     // 2. Scenario Event Simulator (if scenario active)
     if (selectedScenario) {
       // ... (Logic to push scenario events, simplified for brevity)
@@ -402,28 +505,73 @@ export default function PracticeSessionPage() {
   }
 
   const stopRecording = async () => {
+    isRecordingRef.current = false // PREVENT auto-restart in onend
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onend = null // Prevent restart
+        recognitionRef.current.abort()
+      } catch (e) { console.error(e) }
+      recognitionRef.current = null
+    }
+
     cleanup()
     setIsRecording(false)
     setIsPaused(false)
     const endedSession = endSession()
 
-    // 2. Call Agent 1 (Orchestrator) with full session data
-    if (chunksRef.current.length > 0) {
-      const fullBlob = new Blob(chunksRef.current, { type: 'audio/webm' })
-      const formData = new FormData()
-      formData.append('query', `Analyze this session for ${selectedMode || 'general'} mode.`)
-      formData.append('file', fullBlob)
-      formData.append('fileName', `session_${Date.now()}.webm`)
-      formData.append('sessionId', endedSession?.id || 'unknown')
+    // 2. Call Agent 1 (Orchestrator) & Agent 4 (Video Evaluation)
+    // 2. Call Agent 5 & 6 (Confidence & Alignment)
+    // Construct Agent 2 & 3 inputs from current metrics
+    const agent2Data = {
+      pitch: currentMetrics?.pitch || 100,
+      volume: currentMetrics?.volume || 0.5,
+      pace: currentMetrics?.pace || 130,
+      stress_index: currentMetrics?.stress || 0.2,
+      repetition_count: 0
+    }
 
-      try {
-        fetch('/api/agent', {
-          method: 'POST',
-          body: formData
-        }).catch(err => console.error("Agent 1 Upload Error:", err))
-      } catch (e) {
-        console.error("Error prepping Agent 1 upload", e)
-      }
+    const agent3Data = {
+      filler_words: currentMetrics?.fillerWords || 0,
+      clarity_score: 0.85,
+      key_phrases_repeated: []
+    }
+
+    // Call Analysis Endpoint
+    try {
+      // Reconstruct full transcript from items
+      const fullTranscript = liveTranscriptItems.map(item => item.text).join(' ')
+
+      console.log("Calling Analysis API with Transcript length:", fullTranscript.length)
+
+      fetch('/api/agent/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent2: agent2Data,
+          agent3: agent3Data,
+          mode: selectedMode,
+          transcript: fullTranscript // Pass the real transcript string
+        })
+      })
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            console.log("Analysis Result:", data)
+
+            if (data.confidenceMetrics || data.alignmentMetrics) {
+              updateHistorySession(endedSession?.id || '', {
+                confidenceMetrics: data.confidenceMetrics,
+                alignmentMetrics: data.alignmentMetrics
+              })
+              console.log("Session updated with new metrics")
+            }
+          } else {
+            console.error("Analysis API failed", await res.text())
+          }
+        })
+        .catch(err => console.error("Analysis API Network Error:", err))
+    } catch (e) {
+      console.error("Error triggering analysis", e)
     }
 
     if (endedSession) {
@@ -572,6 +720,27 @@ export default function PracticeSessionPage() {
           </div>
         </div>
 
+        {/* Language Selector */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+          <h3 className="text-lg font-medium text-gray-700 mb-3 flex items-center gap-2">
+            <MessageSquare className="w-5 h-5" />
+            Spoken Language
+          </h3>
+          <select
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+          >
+            <option value="en-US">English (US)</option>
+            <option value="en-IN">English (India)</option>
+            <option value="es-ES">Spanish (Spain)</option>
+            <option value="fr-FR">French</option>
+            <option value="de-DE">German</option>
+            <option value="hi-IN">Hindi</option>
+            <option value="zh-CN">Chinese (Simplified)</option>
+          </select>
+        </div>
+
         <button
           onClick={startRecording}
           className="w-full bg-primary-600 text-white py-4 rounded-lg text-lg font-semibold hover:bg-primary-700 transition-all flex items-center justify-center gap-2 shadow-lg"
@@ -647,14 +816,27 @@ export default function PracticeSessionPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Live Transcript */}
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 h-64 overflow-y-auto">
-              <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
-                Live Transcript
-              </h3>
-              <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
-                {liveTranscript || "Start speaking to see transcript..."}
-              </p>
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 h-64 overflow-y-auto flex flex-col-reverse">
+              <div ref={transcriptRef} className="space-y-2">
+                {liveTranscriptItems.map((item, idx) => (
+                  <div key={idx} className="flex gap-3 text-sm">
+                    <span className="text-gray-400 font-mono shrink-0 select-none">{item.timestamp}</span>
+                    <span className="text-gray-800">{item.text}</span>
+                  </div>
+                ))}
+
+                {/* Interim Item */}
+                {interimTranscript && (
+                  <div className="flex gap-3 text-sm animate-pulse">
+                    <span className="text-gray-300 font-mono shrink-0 select-none">--:--</span>
+                    <span className="text-gray-500 italic">{interimTranscript}</span>
+                  </div>
+                )}
+
+                {!liveTranscriptItems.length && !interimTranscript && (
+                  <p className="text-gray-400 text-sm italic">Start speaking to see transcript...</p>
+                )}
+              </div>
             </div>
 
             {/* Live Observations Feed */}

@@ -27,10 +27,19 @@ export interface PracticeSession {
     eyeContact?: number[]
     gestures?: number[]
   }
-  insights?: string[]
-  confidenceScore?: number
-  dominantWeakness?: string
-  improvementHighlight?: string
+  videoMetrics?: {
+    eye_contact_score: number
+    posture_alert: boolean
+    gesture_intensity: 'low' | 'medium' | 'high'
+  }
+  confidenceMetrics?: {
+    confidence_score: number
+    dominant_weakness: string
+  }
+  alignmentMetrics?: {
+    tone_match: boolean
+    suggestion: string
+  }
 }
 
 interface AppState {
@@ -42,6 +51,7 @@ interface AppState {
   endSession: () => PracticeSession | null
   updateSessionMetrics: (metrics: Partial<PracticeSession['metrics']>) => void
   addSession: (session: PracticeSession) => void
+  updateHistorySession: (id: string, data: Partial<PracticeSession>) => void
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -99,5 +109,10 @@ export const useStore = create<AppState>((set) => ({
   }),
   addSession: (session) => set((state) => ({
     practiceHistory: [...state.practiceHistory, session],
+  })),
+  updateHistorySession: (id, data) => set((state) => ({
+    practiceHistory: state.practiceHistory.map(session =>
+      session.id === id ? { ...session, ...data } : session
+    )
   })),
 }))

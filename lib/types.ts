@@ -24,6 +24,26 @@ export interface SessionData {
   confidenceScore?: number
   dominantWeakness?: string
   improvementHighlight?: string
+
+  videoMetrics?: VideoMetrics
+  confidenceMetrics?: ConfidenceMetric
+  alignmentMetrics?: AlignmentMetric
+}
+
+export interface VideoMetrics {
+  eye_contact_score: number
+  posture_alert: boolean
+  gesture_intensity: 'low' | 'medium' | 'high'
+}
+
+export interface ConfidenceMetric {
+  confidence_score: number
+  dominant_weakness: string
+}
+
+export interface AlignmentMetric {
+  tone_match: boolean
+  suggestion: string
 }
 
 export interface DetectedPattern {

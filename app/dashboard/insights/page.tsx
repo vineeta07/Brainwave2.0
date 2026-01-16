@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
 import { useSearchParams } from 'next/navigation'
-import { Clock, TrendingUp, AlertCircle, CheckCircle, Target } from 'lucide-react'
+import { Clock, TrendingUp, AlertCircle, CheckCircle, Target, Video } from 'lucide-react'
 import Link from 'next/link'
 import ConfidenceScoreCard from '@/components/ConfidenceScoreCard'
 import HeatmapView from '@/components/HeatmapView'
@@ -100,14 +100,14 @@ export default function InsightsPage() {
       event: 'Session started',
       type: 'start',
     },
-    ...(session.metrics?.stress?.map((s: number, idx: number) => 
+    ...(session.metrics?.stress?.map((s: number, idx: number) =>
       s > 0.6 ? {
         time: `${Math.floor(idx * 5 / 60)}:${String(Math.floor((idx * 5) % 60)).padStart(2, '0')}`,
         event: 'Stress pattern observed',
         type: 'stress',
       } : null
     ).filter(Boolean) || []),
-    ...(session.metrics?.pace?.map((p: number, idx: number) => 
+    ...(session.metrics?.pace?.map((p: number, idx: number) =>
       p > 180 ? {
         time: `${Math.floor(idx * 5 / 60)}:${String(Math.floor((idx * 5) % 60)).padStart(2, '0')}`,
         event: 'Pace increased',
@@ -126,8 +126,45 @@ export default function InsightsPage() {
       <h1 className="text-3xl font-bold text-gray-900">Practice Insights</h1>
 
       {/* Confidence Score Card */}
-      {confidenceData && (
-        <ConfidenceScoreCard data={confidenceData} />
+      {(session.confidenceMetrics || confidenceData) && (
+        <ConfidenceScoreCard
+          data={session.confidenceMetrics ? {
+            score: session.confidenceMetrics.confidence_score,
+            factors: [
+              { name: 'Pace', impact: 25 },
+              { name: 'Volume', impact: 20 },
+              { name: 'Clarity', impact: 20 },
+              { name: 'Eye Contact', impact: 15 },
+              { name: 'Stress', impact: 20 }
+            ],
+            dominantWeakness: session.confidenceMetrics.dominant_weakness,
+            trend: [65, 68, 72, session.confidenceMetrics.confidence_score]
+          } : confidenceData}
+        />
+      )}
+
+      {/* Alignment Analysis Card (Agent 6) */}
+      {session.alignmentMetrics && (
+        <div className={`p-6 rounded-lg shadow-sm border ${session.alignmentMetrics.tone_match ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+          <h2 className={`text-xl font-semibold mb-4 flex items-center gap-2 ${session.alignmentMetrics.tone_match ? 'text-green-900' : 'text-yellow-900'}`}>
+            <Target className="w-5 h-5" />
+            Purpose & Emotion Alignment
+          </h2>
+
+          <div className="flex items-start gap-4">
+            <div className={`p-3 rounded-full ${session.alignmentMetrics.tone_match ? 'bg-green-200' : 'bg-yellow-200'}`}>
+              {session.alignmentMetrics.tone_match ? <CheckCircle className="w-6 h-6 text-green-700" /> : <AlertCircle className="w-6 h-6 text-yellow-700" />}
+            </div>
+            <div>
+              <h3 className="font-medium text-lg text-gray-900">
+                {session.alignmentMetrics.tone_match ? "Tone Aligned with Context" : "Tone Mismatch Detected"}
+              </h3>
+              <p className="text-gray-700 mt-2">
+                {session.alignmentMetrics.suggestion}
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Session Info */}
@@ -151,6 +188,76 @@ export default function InsightsPage() {
           </div>
         )}
       </div>
+
+      {/* Video Analysis Card (Agent 4) */}
+      {session.videoMetrics && (
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-xl font-semibold mb-6 text-gray-900 flex items-center gap-2">
+            <Video className="w-5 h-5 text-purple-600" />
+            Video Analysis
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Eye Contact */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-medium text-gray-700">Eye Contact</span>
+                <span className={`text-sm px-2 py-0.5 rounded-full ${session.videoMetrics.eye_contact_score > 0.7 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                  }`}>
+                  {Math.round(session.videoMetrics.eye_contact_score * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-full rounded-full transition-all ${session.videoMetrics.eye_contact_score > 0.7 ? 'bg-green-500' : 'bg-yellow-500'
+                    }`}
+                  style={{ width: `${session.videoMetrics.eye_contact_score * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Target: &gt;70% maintenance
+              </p>
+            </div>
+
+            {/* Posture */}
+            <div className={`p-4 rounded-lg border ${session.videoMetrics.posture_alert ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'
+              }`}>
+              <span className="font-medium text-gray-700 block mb-2">Posture Check</span>
+              <div className="flex items-center gap-2">
+                {session.videoMetrics.posture_alert ? (
+                  <>
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    <span className="text-red-700">Slouching Detected</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-green-700">Good Posture</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Gesture Intensity */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <span className="font-medium text-gray-700 block mb-2">Gestures</span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600 capitalize">{session.videoMetrics.gesture_intensity} Intensity</span>
+                <div className="flex gap-1">
+                  {['low', 'medium', 'high'].map((level, i) => (
+                    <div
+                      key={level}
+                      className={`w-2 h-6 rounded-sm ${['low', 'medium', 'high'].indexOf(session.videoMetrics.gesture_intensity) >= i
+                        ? 'bg-blue-500'
+                        : 'bg-gray-200'
+                        }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Heatmap View */}
       {heatmapData.length > 0 && (
@@ -228,7 +335,7 @@ export default function InsightsPage() {
       <div className="bg-green-50 border border-green-200 p-6 rounded-lg">
         <h3 className="text-lg font-semibold mb-2 text-green-900">Remember</h3>
         <p className="text-green-800 text-sm">
-          These insights are observations to help you understand your speech patterns. They're not evaluations or judgments. 
+          These insights are observations to help you understand your speech patterns. They're not evaluations or judgments.
           Every voice is unique, and improvement is a journey. Keep practicing at your own pace, and celebrate your progress along the way.
         </p>
       </div>
