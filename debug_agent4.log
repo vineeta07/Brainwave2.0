@@ -105,3 +105,11 @@
 [2026-01-17T01:45:15.734Z] File details: name=session_1768614303180.webm, size=3309526, type=video/webm
 [2026-01-17T01:45:15.740Z] Session ID: null
 [2026-01-17T01:45:17.479Z] Error: Failed to create session Agent 4: 400 {"message":"One or more agents are invalid","errorCode":"invalid_request","details":{"invalidAgentIds":["696a40ecb2795e4f7116f6bb"]}}
+[2026-01-17T02:52:35.159Z] Received POST request to /api/agent/video
+[2026-01-17T02:52:35.180Z] File details: name=session_1768618332878.webm, size=6818818, type=video/webm
+[2026-01-17T02:52:35.180Z] Session ID: null
+[2026-01-17T02:52:36.360Z] Error: Failed to create session Agent 4: 400 {"message":"One or more agents are invalid","errorCode":"invalid_request","details":{"invalidAgentIds":["696a40ecb2795e4f7116f6bb"]}}
+[2026-01-17T03:53:46.942Z] Received POST request to /api/agent/video
+[2026-01-17T03:53:46.955Z] File details: name=session_1768622007086.webm, size=6168122, type=video/webm
+[2026-01-17T03:53:46.955Z] Session ID: null
+[2026-01-17T03:53:47.353Z] Error: Failed to create session Agent 4: 400 {"message":"One or more agents are invalid","errorCode":"invalid_request","details":{"invalidAgentIds":["696a40ecb2795e4f7116f6bb"]}}

@@ -188,3 +188,23 @@
 [2026-01-17T01:45:18.360Z] Using Agent 3 Data: {"filler_words":0,"clarity_score":0.8,"key_phrases_repeated":[]}
 [2026-01-17T01:45:18.360Z] Running Agent 5 (Confidence)...
 [2026-01-17T01:45:19.986Z] Analysis Error: Failed to create session Agent 5: 400 {"message":"One or more agents are invalid","errorCode":"invalid_request","details":{"invalidAgentIds":["696a3892c7d6dfdf7e337ca2"]}}
+[2026-01-17T02:52:36.496Z] Received POST request to /api/agent/analyze
+[2026-01-17T02:52:36.497Z] Input Mode: pitch
+[2026-01-17T02:52:36.497Z] Transcript Length: 95
+[2026-01-17T02:52:36.497Z] Agent 2 Data: {"pitch":201.3513636363637,"volume":0.14122727272727273,"pace":333.90909090909093,"stress_index":0.24386363636363637,"repetition_count":0}
+[2026-01-17T02:52:36.497Z] Running Agent 3 (NLP)...
+[2026-01-17T02:52:36.862Z] Agent 3 Failed: Failed to create session Agent 3: 400
+[2026-01-17T02:52:36.862Z] Using Agent 4 Data: {"eye_contact_score":0.45,"posture_alert":false,"gesture_intensity":"high"}
+[2026-01-17T02:52:36.862Z] Using Agent 3 Data: {"filler_words":0,"clarity_score":0.8,"key_phrases_repeated":[]}
+[2026-01-17T02:52:36.862Z] Running Agent 5 (Confidence)...
+[2026-01-17T02:52:38.248Z] Analysis Error: Failed to create session Agent 5: 400 {"message":"One or more agents are invalid","errorCode":"invalid_request","details":{"invalidAgentIds":["696a3892c7d6dfdf7e337ca2"]}}
+[2026-01-17T03:53:47.482Z] Received POST request to /api/agent/analyze
+[2026-01-17T03:53:47.483Z] Input Mode: pitch
+[2026-01-17T03:53:47.483Z] Transcript Length: 69
+[2026-01-17T03:53:47.483Z] Agent 2 Data: {"pitch":219.57315789473685,"volume":0.12657894736842104,"pace":383.42105263157896,"stress_index":0.23542105263157898,"repetition_count":0}
+[2026-01-17T03:53:47.483Z] Running Agent 3 (NLP)...
+[2026-01-17T03:53:47.855Z] Agent 3 Failed: Failed to create session Agent 3: 400
+[2026-01-17T03:53:47.855Z] Using Agent 4 Data: {"eye_contact_score":0.45,"posture_alert":false,"gesture_intensity":"medium"}
+[2026-01-17T03:53:47.856Z] Using Agent 3 Data: {"filler_words":0,"clarity_score":0.8,"key_phrases_repeated":[]}
+[2026-01-17T03:53:47.856Z] Running Agent 5 (Confidence)...
+[2026-01-17T03:53:49.118Z] Analysis Error: Failed to create session Agent 5: 400 {"message":"One or more agents are invalid","errorCode":"invalid_request","details":{"invalidAgentIds":["696a3892c7d6dfdf7e337ca2"]}}
