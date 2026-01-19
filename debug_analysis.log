@@ -1,0 +1,7 @@
+[2026-01-18T08:31:39.445Z] Received POST request to /api/agent/analyze
+[2026-01-18T08:31:39.449Z] Input Mode: pitch
+[2026-01-18T08:31:39.450Z] Transcript Length: 113
+[2026-01-18T08:31:39.451Z] Agent 2 Data: {"pitch":117.19,"volume":0.028,"pace":130,"stress_index":0.109,"repetition_count":0}
+[2026-01-18T08:31:39.452Z] Generated Mock Agent 4 Data: {"eye_contact_score":0.85,"posture_alert":false,"gesture_intensity":"medium"}
+[2026-01-18T08:31:39.454Z] Running Agent 5 (Confidence)...
+[2026-01-18T08:31:40.454Z] Analysis Error: Failed to create session Agent 5: 400 {"message":"One or more agents are invalid","errorCode":"invalid_request","details":{"invalidAgentIds":["696a3892c7d6dfdf7e337ca2"]}}

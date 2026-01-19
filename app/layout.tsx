@@ -1,10 +1,7 @@
-import type { Metadata } from 'next'
-import './globals.css'
+"use client"
 
-export const metadata: Metadata = {
-  title: 'SPEAKEZ - Speech Understanding & Practice Platform',
-  description: 'Understand how you speak. Learn how to practice. A supportive, non-judgmental platform for speech improvement.',
-}
+import './globals.css'
+import ChatBot from '../ChatBot' // adjust path as needed
 
 export default function RootLayout({
   children,
@@ -13,7 +10,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <ChatBot />
+      </body>
     </html>
   )
 }
