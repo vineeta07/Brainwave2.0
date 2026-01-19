@@ -28,6 +28,7 @@ export interface SessionData {
   videoMetrics?: VideoMetrics
   confidenceMetrics?: ConfidenceMetric
   alignmentMetrics?: AlignmentMetric
+  drillMetrics?: any
 }
 
 export interface VideoMetrics {
@@ -39,6 +40,13 @@ export interface VideoMetrics {
 export interface ConfidenceMetric {
   confidence_score: number
   dominant_weakness: string
+  factors: {
+    name: string
+    impact: number
+    score: number
+  }[]
+  key_observations: string[]
+  summary_text: string
 }
 
 export interface AlignmentMetric {
@@ -88,6 +96,7 @@ export interface ConfidenceData {
   factors: {
     name: string
     impact: number
+    score?: number
   }[]
   dominantWeakness: string
   trend: number[]

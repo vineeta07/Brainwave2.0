@@ -35,10 +35,21 @@ export interface PracticeSession {
   confidenceMetrics?: {
     confidence_score: number
     dominant_weakness: string
+    factors?: {
+      name: string
+      impact: number
+      score?: number
+    }[]
+    key_observations?: string[]
+    summary_text?: string
   }
   alignmentMetrics?: {
     tone_match: boolean
     suggestion: string
+  }
+  drillMetrics?: {
+    task: string
+    feedback: string
   }
 }
 
@@ -93,15 +104,23 @@ export const useStore = create<AppState>((set) => ({
     })
     return endedSession
   },
-  updateSessionMetrics: (metrics) => set((state) => {
+  updateSessionMetrics: (newMetrics) => set((state) => {
     if (state.currentSession) {
+      const updatedMetrics = { ...state.currentSession.metrics }
+
+      // Iterate through new keys and append to existing arrays
+      Object.keys(newMetrics).forEach((key) => {
+        const value = (newMetrics as any)[key]
+        if (Array.isArray(value)) {
+          // @ts-ignore
+          updatedMetrics[key] = [...(updatedMetrics[key] || []), ...value]
+        }
+      })
+
       return {
         currentSession: {
           ...state.currentSession,
-          metrics: {
-            ...state.currentSession.metrics,
-            ...metrics,
-          },
+          metrics: updatedMetrics,
         },
       }
     }

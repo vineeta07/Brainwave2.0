@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
 import { useSearchParams } from 'next/navigation'
-import { Clock, TrendingUp, AlertCircle, CheckCircle, Target, Video } from 'lucide-react'
+import { Clock, TrendingUp, AlertCircle, CheckCircle, Target, Video, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import ConfidenceScoreCard from '@/components/ConfidenceScoreCard'
 import HeatmapView from '@/components/HeatmapView'
@@ -22,27 +22,62 @@ export default function InsightsPage() {
   const [confidenceData, setConfidenceData] = useState<ConfidenceData | null>(null)
   const [heatmapData, setHeatmapData] = useState<HeatmapData[]>([])
 
+  const [agent9Data, setAgent9Data] = useState<any>(null)
+
   useEffect(() => {
     if (sessionId) {
       const found = practiceHistory.find(s => s.id === sessionId)
       setSession(found)
       if (found) {
         generateInsights(found)
-        // Load mock data (in production, from backend)
-        setConfidenceData(generateMockConfidenceData())
+        // Only load mock data if we don't have real Agent 5 data
+        if (!found.confidenceMetrics) {
+          setConfidenceData(generateMockConfidenceData())
+        }
         setHeatmapData(generateMockHeatmapData())
       }
     } else if (practiceHistory.length > 0) {
       const lastSession = practiceHistory[practiceHistory.length - 1]
       setSession(lastSession)
       generateInsights(lastSession)
-      setConfidenceData(generateMockConfidenceData())
+      if (!lastSession.confidenceMetrics) {
+        setConfidenceData(generateMockConfidenceData())
+      }
       setHeatmapData(generateMockHeatmapData())
     }
+
+    // Call Agent 9 (Progress) if we have history
+    if (practiceHistory.length > 0) {
+      fetch('/api/agent/progress', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessions: practiceHistory.map(s => ({
+            session_id: s.id,
+            confidence_score: s.confidenceMetrics?.confidence_score || 0,
+            pace: s.metrics?.pace?.[0] || 0,
+            fillers: s.metrics?.fillerWords || 0,
+            eye_contact: s.videoMetrics?.eye_contact_score || 0,
+            date: new Date(s.startTime).toISOString().split('T')[0]
+          }))
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.error) setAgent9Data(data)
+        })
+        .catch(err => console.error("Agent 9 Failed", err))
+    }
+
   }, [sessionId, practiceHistory])
 
   const generateInsights = (sessionData: any) => {
     const generated: string[] = []
+
+    // 1. Prefer Agent 5 Observations if available
+    if (sessionData.confidenceMetrics?.key_observations && sessionData.confidenceMetrics.key_observations.length > 0) {
+      setInsights(sessionData.confidenceMetrics.key_observations)
+      return
+    }
 
     // Analyze pace
     if (sessionData.metrics?.pace?.length > 0) {
@@ -130,16 +165,17 @@ export default function InsightsPage() {
         <ConfidenceScoreCard
           data={session.confidenceMetrics ? {
             score: session.confidenceMetrics.confidence_score,
-            factors: [
-              { name: 'Pace', impact: 25 },
-              { name: 'Volume', impact: 20 },
-              { name: 'Clarity', impact: 20 },
-              { name: 'Eye Contact', impact: 15 },
-              { name: 'Stress', impact: 20 }
+            // Use Agent 5 factors if available, otherwise fallback (though Agent 5 should always provide them now)
+            factors: session.confidenceMetrics.factors || [
+              { name: 'Pace', impact: 0.25, score: 0 },
+              { name: 'Volume', impact: 0.2, score: 0 },
+              { name: 'Clarity', impact: 0.2, score: 0 },
+              { name: 'Eye Contact', impact: 0.15, score: 0 },
+              { name: 'Stress', impact: 0.2, score: 0 }
             ],
             dominantWeakness: session.confidenceMetrics.dominant_weakness,
             trend: [65, 68, 72, session.confidenceMetrics.confidence_score]
-          } : confidenceData}
+          } : confidenceData!}
         />
       )}
 
@@ -188,6 +224,19 @@ export default function InsightsPage() {
           </div>
         )}
       </div>
+
+      {/* Agent 5 Summary Text */}
+      {session.confidenceMetrics?.summary_text && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-100">
+          <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            AI Session Summary
+          </h3>
+          <p className="text-blue-800 leading-relaxed">
+            {session.confidenceMetrics.summary_text}
+          </p>
+        </div>
+      )}
 
       {/* Video Analysis Card (Agent 4) */}
       {session.videoMetrics && (
@@ -303,31 +352,80 @@ export default function InsightsPage() {
         </div>
       </div>
 
-      {/* Micro-Practice Suggestions */}
+      {/* Progress & Trends (Agent 9) */}
+      {agent9Data && (
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 animate-fade-in">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-indigo-600" />
+            Progress & Resources
+          </h2>
+
+          <div className="mb-6 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+            <h3 className="font-medium text-indigo-900 mb-1">Overall Trend</h3>
+            <p className="text-indigo-700 text-lg font-semibold">{agent9Data.overall_trend}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Heatmap Text */}
+            <div className="p-4 border border-gray-100 rounded-lg bg-gray-50">
+              <h3 className="font-medium text-gray-700 mb-3">Performance Heatmap</h3>
+              <div className="space-y-3 font-mono text-sm">
+                {Object.entries(agent9Data.heatmap).map(([key, val]: any) => (
+                  <div key={key} className="flex justify-between border-b border-gray-200 pb-2">
+                    <span className="capitalize text-gray-600">{key.replace('_', ' ')}:</span>
+                    <span className="text-gray-900">{val}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Resources */}
+            <div className="p-4 border border-gray-100 rounded-lg bg-gray-50">
+              <h3 className="font-medium text-gray-700 mb-3">Recommended Resources</h3>
+              <ul className="space-y-2">
+                {agent9Data.resources.map((link: string, i: number) => (
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    <span className="text-indigo-500 mt-1">•</span>
+                    <a href={link.startsWith('http') ? link : '#'} target="_blank" className="text-indigo-600 hover:underline break-all">
+                      {link}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              {agent9Data.support_tip && (
+                <div className="mt-4 pt-3 border-t border-gray-200">
+                  <p className="text-sm text-gray-600 italic">💡 Tip: {agent9Data.support_tip}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Suggested Next Practice (Agent 8 Integration Placeholder) */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <h2 className="text-xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
           <Target className="w-5 h-5 text-primary-500" />
           Suggested Next Practice
         </h2>
+
+        {/* We can integrate Agent 8 result here if available, otherwise show existing suggestions */}
         <div className="space-y-4">
-          <div className="bg-primary-50 border border-primary-200 p-4 rounded-lg">
-            <p className="font-medium text-gray-900 mb-2">15-30 Second Exercise</p>
-            <p className="text-sm text-gray-700 mb-3">
-              Practice maintaining steady pace during topic transitions. Start with a brief pause, then continue.
-            </p>
-            <p className="text-xs text-gray-600">
-              <strong>Goal:</strong> Reduce pace spikes during transitions
-            </p>
-          </div>
-          <div className="bg-accent-50 border border-accent-200 p-4 rounded-lg">
-            <p className="font-medium text-gray-900 mb-2">Breathing Exercise</p>
-            <p className="text-sm text-gray-700 mb-3">
-              Before starting a new section, take a deep breath. This helps manage stress patterns naturally.
-            </p>
-            <p className="text-xs text-gray-600">
-              <strong>Goal:</strong> Reduce stress spikes at section starts
-            </p>
-          </div>
+          {session.drillMetrics ? (
+            <div className="bg-primary-50 border border-primary-200 p-4 rounded-lg animate-fade-in">
+              <p className="font-medium text-gray-900 mb-2">Recommended Drill: {session.drillMetrics.task || "Practice Session"}</p>
+              <p className="text-sm text-gray-700 mb-3">
+                {session.drillMetrics.feedback || "Focus on improving your pace and tone consistency."}
+              </p>
+              <p className="text-xs text-gray-600">
+                <strong>Focus:</strong> {session.confidenceMetrics?.dominant_weakness || "General Improvement"}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+              <p className="text-gray-500 text-sm">Complete a session to get a personalized drill.</p>
+            </div>
+          )}
         </div>
       </div>
 

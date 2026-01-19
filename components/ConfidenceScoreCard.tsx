@@ -29,7 +29,7 @@ export default function ConfidenceScoreCard({ data }: ConfidenceScoreCardProps) 
           <span className="text-sm text-gray-600">Trending up</span>
         </div>
       </div>
-      
+
       <div className="text-center mb-6">
         <div className={`text-6xl font-bold ${getScoreColor(data.score)} mb-2`}>
           {data.score}
@@ -41,22 +41,27 @@ export default function ConfidenceScoreCard({ data }: ConfidenceScoreCardProps) 
         <div>
           <p className="text-sm font-medium text-gray-700 mb-2">What influenced this score:</p>
           <div className="space-y-2">
-            {data.factors.map((factor, idx) => (
-              <div key={idx} className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">{factor.name}</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-24 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-primary-500 h-2 rounded-full"
-                      style={{ width: `${factor.impact * 100}%` }}
-                    />
+            {data.factors.map((factor, idx) => {
+              // Handle impact as 0-1 or 0-100
+              const impactVal = factor.impact > 1 ? factor.impact : factor.impact * 100
+
+              return (
+                <div key={idx} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">{factor.name}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-primary-500 h-2 rounded-full"
+                        style={{ width: `${impactVal}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-500 w-8 text-right">
+                      {Math.round(impactVal)}%
+                    </span>
                   </div>
-                  <span className="text-xs text-gray-500 w-8 text-right">
-                    {Math.round(factor.impact * 100)}%
-                  </span>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>

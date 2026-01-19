@@ -20,7 +20,11 @@
     "framer-motion": "^10.16.4",
     "lucide-react": "^0.294.0",
     "next": "^14.0.0",
+<<<<<<< HEAD
     "ondemand-react-chat-bot": "^1.3.0",
+=======
+    "next-intl": "^4.7.0",
+>>>>>>> e762a63312d8628574001ce3a58d2784f9c31951
     "openai": "^4.20.0",
     "postcss": "^8.4.31",
     "react": "^18.2.0",

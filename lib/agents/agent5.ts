@@ -18,7 +18,7 @@ Parse this JSON:
 {{input}}
 </AGENT_DATA>
 
-You are Agent 5: Confidence Signal & Score Engine. Call the confidence_calculator tool to unify speech metrics.
+You are Agent 5: Confidence Signal & Score Engine. Your job is to synthesize speech metrics (Agent 2), fluency (Agent 3), and body language (Agent 4) into a cohesive confidence profile.
 
 INPUT FORMAT (from Agents 2, 3, 4):
 {
@@ -28,18 +28,57 @@ INPUT FORMAT (from Agents 2, 3, 4):
 }
 
 TOOL CALL INSTRUCTION:
-1. Extract agent2, agent3, agent4 from input JSON.
-2. Call tool: confidence_calculator
-   Input: {"agent2": agent2, "agent3": agent3, "agent4": agent4}
-3. Tool returns: {"confidence_score": N, "dominant_weakness": "X"}
-
-OUTPUT ONLY tool response JSON:
+1. Analyze the input data to determine confidence levels.
+2. Call tool: confidence_calculator (conceptually, or just output the JSON directly if no tool is available, but here we simulate the output).
+   
+OUTPUT JSON FORMAT (Strictly match this):
 {
-  "confidence_score": 82,
-  "dominant_weakness": "pace"
+  "confidence_score": 0-100,
+  "dominant_weakness": "one of (Pace, Volume, Clarity, Eye Contact, Stress, Posture, Vocabulary, Completeness)",
+  "factors": [
+    { "name": "Pace Control", "impact": 0-100, "score": 0-100 },
+    { "name": "Volume Consistency", "impact": 0-100, "score": 0-100 },
+    { "name": "Eye Contact", "impact": 0-100, "score": 0-100 },
+    { "name": "Stress Management", "impact": 0-100, "score": 0-100 },
+    { "name": "Clarity & Fillers", "impact": 0-100, "score": 0-100 },
+    { "name": "Sentence Completeness", "impact": 0-100, "score": 0-100 },
+    { "name": "Vocabulary Richness", "impact": 0-100, "score": 0-100 }
+  ],
+  "key_observations": [
+    "Observation 1",
+    "Observation 2",
+    "Observation 3"
+  ],
+  "summary_text": "A short, encouraging summary."
 }
 
-Do NOT calculate scores yourself. Use ONLY tool output. No modifications.`
+CRITICAL RULES:
+1. Do NOT copy the example output.
+2. CALCULATE scores based on the input data 'agent2', 'agent3', 'agent4'.
+3. If valid input is missing, use sensible defaults but do NOT return the specific example text below.
+4. 'impact' should sum to roughly 100 across all factors (it represents weight/importance).
+5. 'score' is your evaluation of that factor (0-100).
+
+Example Output (DO NOT COPY THIS):
+{
+  "confidence_score": 50,
+  "dominant_weakness": "Clarity & Fillers",
+  "factors": [
+    { "name": "Pace Control", "impact": 10, "score": 50 },
+    { "name": "Volume Consistency", "impact": 10, "score": 50 },
+    { "name": "Eye Contact", "impact": 10, "score": 50 },
+    { "name": "Stress Management", "impact": 10, "score": 50 },
+    { "name": "Clarity & Fillers", "impact": 30, "score": 40 },
+    { "name": "Sentence Completeness", "impact": 15, "score": 60 },
+    { "name": "Vocabulary Richness", "impact": 15, "score": 55 }
+  ],
+  "key_observations": [
+    "You used 12 filler words which impacted clarity.",
+    "Sentence structure was fragmented.",
+    "Volume was low."
+  ],
+  "summary_text": "This is a generic example summary. Do not output this text."
+}`
 
 export interface Agent5Input {
     agent2: any // Speech Signal

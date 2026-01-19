@@ -17,16 +17,29 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    
+
     // TODO: Implement actual login logic
-    // For now, simulate login
+    // For now, simulate login with Demo Credentials support
     setTimeout(() => {
       // In production, verify credentials with backend
       const storedUser = localStorage.getItem('speakez_user')
+
+      // AUTO-SUCCESS for Demo Credentials
+      if (formData.email === 'hertech@speakez.com' || formData.email === 'demo@speakez.com') {
+        localStorage.setItem('speakez_user', JSON.stringify({
+          name: 'HerTech Demo',
+          email: formData.email,
+          hasSpeechDisorder: false,
+          goal: 'pitching'
+        }))
+        router.push('/dashboard')
+        return
+      }
+
       if (storedUser) {
         router.push('/dashboard')
       } else {
-        setError('Invalid credentials. Please sign up first.')
+        setError('Invalid credentials. Try using: hertech@speakez.com')
         setLoading(false)
       }
     }, 1000)
@@ -43,7 +56,7 @@ export default function LoginPage() {
         <h1 className="text-3xl font-bold text-center mb-6 text-gray-900">
           Welcome Back
         </h1>
-        
+
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
             {error}
@@ -61,7 +74,7 @@ export default function LoginPage() {
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
 
@@ -75,7 +88,7 @@ export default function LoginPage() {
               required
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
 
